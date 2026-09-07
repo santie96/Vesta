@@ -24,7 +24,7 @@ async def get_categories(
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=CategorySchema)
 async def create_new_category(
-    payload: CategoryCreateRequestSchema,
+    payload: CategoryCreateSchema,
     db: AsyncSession = Depends(get_db), 
 ):
     """
@@ -38,7 +38,7 @@ async def create_new_category(
 
 @router.patch("/{category_id}", status_code=status.HTTP_200_OK, response_model=CategorySchema)
 async def update_category(
-    payload: CategoryUpdateRequestSchema,    
+    payload: CategoryUpdateSchema,    
     category_id: int, 
     db: AsyncSession = Depends(get_db),
 ):
@@ -89,7 +89,7 @@ async def get_subcategory_details(
 
 @router.post("/subcategories", status_code=status.HTTP_201_CREATED, response_model=SubCategorySchema)
 async def create_new_subcategory(
-    payload: SubCategoryCreateRequestSchema,
+    payload: SubCategoryCreateSchema,
     db: AsyncSession = Depends(get_db), 
 ):
     """
@@ -103,7 +103,7 @@ async def create_new_subcategory(
 
 @router.patch("/subcategories/{subcategory_id}", status_code=status.HTTP_200_OK, response_model=SubCategorySchema)
 async def update_subcategory(
-    payload: SubCategoryUpdateRequestSchema,    
+    payload: SubCategoryUpdateSchema,    
     subcategory_id: int, 
     db: AsyncSession = Depends(get_db),
 ):

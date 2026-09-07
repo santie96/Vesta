@@ -7,7 +7,7 @@ from .models import TargetKey
 
 router = APIRouter(
     prefix="/products",
-    tags=["Products"],
+    tags=["Products, Variants & Product Reviews"],
     responses={404: {"description": "Not found"}},
 )
 
@@ -26,10 +26,11 @@ async def get_products(
         "price_desc", 
         "created_at_asc", 
         "created_at_desc"
-        ] | None = None
+        ] | None = None,
+    review_rating: float | None = None
     ):
     """
-    Get paginated products with category, subcategory and variants
+    Get paginated products with category, subcategory, variants and reviews
     
     Can be filtered by query params
     
@@ -44,13 +45,14 @@ async def get_products(
         color_name,
         size,
         target_key,
-        sort
+        sort,
+        review_rating
         )
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=ProductSchema)
 async def create_new_product(
-    payload: ProductCreateRequestSchema,
+    payload: ProductCreateSchema,
     db: AsyncSession = Depends(get_db), 
 ):
     """
@@ -80,7 +82,7 @@ async def get_product_details(
 
 @router.patch("/{product_id}", status_code=status.HTTP_200_OK, response_model=ProductSchema)
 async def update_product(
-    payload: ProductUpdateRequestSchema,    
+    payload: ProductUpdateSchema,    
     product_id: int, 
     db: AsyncSession = Depends(get_db),
 ):
@@ -107,7 +109,7 @@ async def delete_product(product_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/variants", status_code=status.HTTP_201_CREATED, response_model=ProductVariantSchema)
 async def create_new_variant(
-    payload: ProductVariantCreateRequestSchema,
+    payload: ProductVariantCreateSchema,
     db: AsyncSession = Depends(get_db), 
 ):
     """
@@ -128,3 +130,62 @@ async def delete_variant(variant_id: int, db: AsyncSession = Depends(get_db)):
     """
     
     return await delete_variant_service(db, variant_id)
+
+
+@router.get("/{product_id}/reviews", status_code=status.HTTP_200_OK, response_model=PaginatedProductReviewsResponse)
+async def get_product_reviews(
+    product_id: int,
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100)
+):
+    """
+    Get paginated product reviews
+    """
+    
+    return await get_product_reviews_service(db, product_id, page, limit)
+
+
+@router.post(
+    "/{product_id}/reviews", 
+    status_code=status.HTTP_201_CREATED,
+    response_model=ProductReviewResponseSchema
+)
+async def create_product_reviews(
+    current_user_id: int,
+    product_id: int, 
+    payload: ProductReviewCreateSchema, 
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create a new product review for a specific product
+    
+    (AUTHENTICATION AND USER ROLE REQUIRED)
+    """
+    
+    return await create_product_review_service(current_user_id,product_id, payload, db)
+
+@router.patch("/reviews/{review_id}", status_code=status.HTTP_200_OK, response_model=ProductReviewResponseSchema)
+async def update_product_review(
+    payload: ProductReviewUpdateSchema,    
+    review_id: int, 
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update a product review
+    
+    (AUTHENTICATION AND USER ROLE REQUIRED)
+    """
+    
+    return await update_product_review_service(db, review_id, payload)
+
+
+@router.delete("/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product_review(review_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Delete permanently a product review
+    
+    (AUTHENTICATION REQUIRED)
+    """
+    
+    return await delete_product_review_service(db, review_id)

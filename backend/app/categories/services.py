@@ -58,7 +58,7 @@ async def get_categories_service(db: AsyncSession, page: int, limit: int) -> Cat
     )
     
 
-async def create_category_service(db: AsyncSession, payload: CategoryCreateRequestSchema) -> CategorySchema:
+async def create_category_service(db: AsyncSession, payload: CategoryCreateSchema) -> CategorySchema:
     """
     Create a new category
     """
@@ -86,7 +86,7 @@ async def create_category_service(db: AsyncSession, payload: CategoryCreateReque
 
 async def update_category_service(
     db: AsyncSession, 
-    paylaod: CategoryUpdateRequestSchema, 
+    paylaod: CategoryUpdateSchema, 
     category_id: int
 ) -> CategorySchema:
     
@@ -197,7 +197,7 @@ async def get_subcategory_details_service(db: AsyncSession, subcategory_id: int)
 
 async def create_subcategory_service(
     db: AsyncSession, 
-    payload: SubCategoryCreateRequestSchema
+    payload: SubCategoryCreateSchema
 ) -> SubCategorySchema:
     """
     Create a new subcategory 
@@ -233,7 +233,7 @@ async def create_subcategory_service(
 async def update_subcategory_service(
     db: AsyncSession, 
     subcategory_id: int, 
-    payload: SubCategoryUpdateRequestSchema
+    payload: SubCategoryUpdateSchema
 ) -> SubCategorySchema:
     
     existing_subcategory = await _get_subcategory_by_id(db, subcategory_id)

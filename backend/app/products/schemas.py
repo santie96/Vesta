@@ -1,9 +1,11 @@
-from pydantic import BaseModel, field_validator, field_serializer
+from pydantic import BaseModel, field_validator, field_serializer, computed_field
 from datetime import datetime
 from .models import TargetKey
 from re import match
-from app.core.schemas import SyncModelORM
-from app.categories.schemas import CategorySchema, SubCategoryNestedProductSchema
+from app.core.schemas import SyncModelORM, BasePaginatedResponse
+from app.categories.schemas import CategorySchema, SubCategorySchema
+from app.reviews.schemas import BaseReviewCreateSchema, BaseReviewUpdateSchema
+from app.users.schemas import UserReviewResponseSchema
 
 # ====================================
 # PRODUCT
@@ -23,9 +25,9 @@ class ProductSchema(SyncModelORM):
     created_at: datetime
     updated_at: datetime
 
-    category: CategorySchema
-    sub_category: SubCategoryNestedProductSchema
+    sub_category: SubCategorySchema
     variants: list[ProductVariantSchema]
+    reviews: list[ProductReviewResponseSchema]
 
     @field_serializer("price_cents")
     def serialize_price_cents(self, value: int) -> float:
@@ -34,7 +36,12 @@ class ProductSchema(SyncModelORM):
         """
         return value / 100
 
-class ProductCreateRequestSchema(BaseModel):
+    @computed_field
+    @property
+    def category(self) -> CategorySchema:
+        return CategorySchema.model_validate(self.sub_category.category)
+
+class ProductCreateSchema(BaseModel):
     title: str
     subtitle: str
     description: str
@@ -43,23 +50,38 @@ class ProductCreateRequestSchema(BaseModel):
     new_arrivals: bool | None = None
     image_url: str
     
-    category_id: int
     sub_category_id: int
 
-    variant: ProductVariantCreateRequestSchema
+    variant: ProductVariantNestedCreateSchema
     
     @field_validator("title")
     @classmethod
     def validate_title(cls, value: str) -> str:
-        if not match(r"^[A-Za-z0-9 ]{1,100}$", value):
-            raise ValueError("title length must be between 1 and 100 characters can contain only alphanumeric characters and spaces")
+        value = value.strip()
+        if not value:
+            raise ValueError(
+                "title cannot be empty"
+            )
+        
+        if len(value) > 100:
+            raise ValueError(
+                "title length must be less than 100 characters"
+            )
         return value
     
     @field_validator("subtitle")
     @classmethod
     def validate_subtitle(cls, value: str) -> str:
-        if not match(r"^[A-Za-z0-9 ]{1,100}$", value):
-            raise ValueError("subtitle length must be between 1 and 100 characters can contain only alphanumeric characters and spaces")
+        value = value.strip()
+        if not value:
+            raise ValueError(
+                "subtitle cannot be empty"
+            )
+        
+        if len(value) > 100:
+            raise ValueError(
+                "subtitle length must be less than 100 characters"
+            )
         return value
     
     
@@ -76,14 +98,7 @@ class ProductCreateRequestSchema(BaseModel):
         if value < 0:
             raise ValueError("price_cents must be positive value")
         return value
-    
 
-    @field_validator("category_id")
-    @classmethod
-    def validate_category_id(cls, value: int) -> int:
-        if value < 0:
-            raise ValueError("category_id must be positive value")
-        return value    
     
     @field_validator("sub_category_id")
     @classmethod
@@ -93,7 +108,7 @@ class ProductCreateRequestSchema(BaseModel):
         return value    
     
     
-class ProductUpdateRequestSchema(ProductCreateRequestSchema):
+class ProductUpdateSchema(ProductCreateSchema):
     title: str | None = None
     subtitle: str | None = None
     description: str | None = None
@@ -103,21 +118,13 @@ class ProductUpdateRequestSchema(ProductCreateRequestSchema):
     image_url: str | None = None
     is_active: bool | None = None
     
-    category_id: int | None = None
     sub_category_id: int | None = None
     
-    variant: ProductVariantUpdateRequestSchema
+    variant: ProductVariantUpdateSchema
     
     
-class PaginatedProductResponse(BaseModel):
-    total_items: int
-    total_pages: int
-    items_per_page: int
-    prev_page: int | None
-    current_page: int
-    next_page: int | None
+class PaginatedProductResponse(BasePaginatedResponse):
     items: list[ProductSchema]
-
 
 # ====================================
 # PRODUCT VARIANT
@@ -139,20 +146,12 @@ class ProductVariantSchema(SyncModelORM):
         return value
 
 
-class ProductVariantCreateRequestSchema(BaseModel):
-    product_id: int
+class ProductVariantNestedCreateSchema(BaseModel):
     size: str
     color_name: str
     color_hex: str
     target_key: TargetKey
     stock: int    
-        
-    @field_validator("product_id")
-    @classmethod
-    def validate_product_id(cls, value: int) -> int:
-        if value < 0:
-            raise ValueError("product_id must be positive value")
-        return value
         
     @field_validator("stock")
     @classmethod
@@ -168,7 +167,18 @@ class ProductVariantCreateRequestSchema(BaseModel):
             raise ValueError("color_hex must be a valid hex color code")
         return value
     
-class ProductVariantUpdateRequestSchema(ProductVariantCreateRequestSchema):
+    
+class ProductVariantCreateSchema(ProductVariantNestedCreateSchema):
+    product_id: int
+
+    @field_validator("product_id")
+    @classmethod
+    def validate_product_id(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("product_id must be positive value")
+        return value
+    
+class ProductVariantUpdateSchema(ProductVariantCreateSchema):
     id: int
     
     size: str | None = None
@@ -183,3 +193,24 @@ class ProductVariantUpdateRequestSchema(ProductVariantCreateRequestSchema):
         if value < 0:
             raise ValueError("id must be positive value")
         return value
+    
+    
+class ProductReviewCreateSchema(BaseReviewCreateSchema):
+    pass
+    
+    
+class ProductReviewUpdateSchema(BaseReviewUpdateSchema):
+    pass
+
+class ProductReviewResponseSchema(SyncModelORM):
+    id: int
+    rating: float
+    message: str
+    created_at: datetime
+    updated_at: datetime
+    
+    user: UserReviewResponseSchema
+    
+    
+class PaginatedProductReviewsResponse(BasePaginatedResponse):
+    items: list[ProductReviewResponseSchema]

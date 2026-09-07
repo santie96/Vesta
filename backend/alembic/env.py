@@ -9,8 +9,7 @@ import asyncio
 
 from app.database.connection import Base, DATABASE_URL
 
-from app.products.models import *
-from app.categories.models import *
+import app.database.models_registry
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

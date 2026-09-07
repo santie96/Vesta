@@ -12,3 +12,6 @@ class InvalidImageURLException(ExternalServiceException):
 
 class ProductVariantNotFoundException(NotFoundException):
     pass
+
+class ProductReviewNotFoundException(NotFoundException):
+    pass
